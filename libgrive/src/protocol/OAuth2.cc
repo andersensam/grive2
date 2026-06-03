@@ -30,7 +30,104 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <poll.h>
+
+// Cross-platform polling implementation
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__)
+    // macOS and BSD systems may not have poll() or POLLRDHUP
+    // First try to include sys/poll.h which may be available on some BSD systems
+    #include <sys/types.h>
+    #if defined(__APPLE__)
+        // On macOS, poll() is available but POLLRDHUP might not be
+        #include <sys/poll.h>
+        #ifndef POLLRDHUP
+            #define POLLRDHUP 0
+        #endif
+    #else
+        // On other BSD systems, poll() might not be available at all
+        #ifndef POLLRDHUP
+            #define POLLRDHUP 0
+        #endif
+        // Define pollfd structure for systems without it
+        struct pollfd {
+            int fd;
+            short events;
+            short revents;
+        };
+        // Define poll event constants
+        #ifndef POLLIN
+            #define POLLIN 0x0001
+        #endif
+        #ifndef POLLOUT
+            #define POLLOUT 0x0004
+        #endif
+        #ifndef POLLPRI
+            #define POLLPRI 0x0002
+        #endif
+        #ifndef POLLRDHUP
+            #define POLLRDHUP 0
+        #endif
+        
+        // Provide a poll() wrapper using select() for systems that don't have poll()
+        static int poll_wrapper(struct pollfd *fds, int nfds, int timeout)
+        {
+            fd_set readfds, writefds, exceptfds;
+            struct timeval tv, *tvptr;
+            int maxfd, ret;
+            
+            if (fds == NULL || nfds <= 0)
+                return 0;
+            
+            FD_ZERO(&readfds);
+            FD_ZERO(&writefds);
+            FD_ZERO(&exceptfds);
+            
+            maxfd = -1;
+            for (int i = 0; i < nfds; i++) {
+                if (fds[i].fd >= 0) {
+                    if (fds[i].events & POLLIN)
+                        FD_SET(fds[i].fd, &readfds);
+                    if (fds[i].events & POLLOUT)
+                        FD_SET(fds[i].fd, &writefds);
+                    FD_SET(fds[i].fd, &exceptfds);
+                    if (fds[i].fd > maxfd)
+                        maxfd = fds[i].fd;
+                }
+            }
+            
+            if (timeout < 0)
+                tvptr = NULL;
+            else {
+                tv.tv_sec = timeout / 1000;
+                tv.tv_usec = (timeout % 1000) * 1000;
+                tvptr = &tv;
+            }
+            
+            ret = select(maxfd + 1, &readfds, &writefds, &exceptfds, tvptr);
+            
+            if (ret > 0) {
+                for (int i = 0; i < nfds; i++) {
+                    fds[i].revents = 0;
+                    if (fds[i].fd >= 0) {
+                        if (FD_ISSET(fds[i].fd, &readfds))
+                            fds[i].revents |= POLLIN;
+                        if (FD_ISSET(fds[i].fd, &writefds))
+                            fds[i].revents |= POLLOUT;
+                        if (FD_ISSET(fds[i].fd, &exceptfds))
+                            fds[i].revents |= POLLPRI;
+                    }
+                }
+            }
+            
+            return ret;
+        }
+        
+        // Use our wrapper on systems without native poll()
+        #define poll poll_wrapper
+    #endif
+#else
+    // Linux and other systems with full poll() support
+    #include <poll.h>
+#endif
 
 // for debugging
 #include <iostream>
@@ -105,17 +202,31 @@ std::string OAuth2::MakeAuthURL()
 {
 	if ( !m_port )
 	{
-		sockaddr_storage addr = { 0 };
-		addr.ss_family = AF_INET;
 		m_socket = socket( AF_INET, SOCK_STREAM, 0 );
 		if ( m_socket < 0 )
 			throw std::runtime_error( std::string("socket: ") + strerror(errno) );
+		
+		// Set SO_REUSEADDR to avoid "Address already in use" errors
+		int reuse = 1;
+		if ( setsockopt( m_socket, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof( reuse ) ) < 0 )
+		{
+			close( m_socket );
+			m_socket = -1;
+			throw std::runtime_error( std::string("setsockopt(SO_REUSEADDR): ") + strerror(errno) );
+		}
+		
+		// Initialize sockaddr_in structure properly
+		sockaddr_in addr = { 0 };
+		addr.sin_family = AF_INET;
+		addr.sin_addr.s_addr = htonl( INADDR_LOOPBACK ); // Bind to localhost only
+		
 		if ( bind( m_socket, (sockaddr*)&addr, sizeof( addr ) ) < 0 )
 		{
 			close( m_socket );
 			m_socket = -1;
 			throw std::runtime_error( std::string("bind: ") + strerror(errno) );
 		}
+		
 		socklen_t len = sizeof( addr );
 		if ( getsockname( m_socket, (sockaddr *)&addr, &len ) == -1 )
 		{
@@ -123,7 +234,8 @@ std::string OAuth2::MakeAuthURL()
 			m_socket = -1;
 			throw std::runtime_error( std::string("getsockname: ") + strerror(errno) );
 		}
-		m_port = ntohs(((sockaddr_in*)&addr)->sin_port);
+		m_port = ntohs( addr.sin_port );
+		
 		if ( listen( m_socket, 128 ) < 0 )
 		{
 			close( m_socket );
@@ -151,9 +263,9 @@ bool OAuth2::GetCode( )
 			throw std::runtime_error( std::string("accept: ") + strerror(errno) );
 	}
 	fcntl( peer_fd, F_SETFL, fcntl( peer_fd, F_GETFL, 0 ) | O_NONBLOCK );
-	struct pollfd pfd = (struct pollfd){
+	struct pollfd pfd = {
 		.fd = peer_fd,
-		.events = POLLIN|POLLRDHUP,
+		.events = POLLIN,
 	};
 	char buf[4096];
 	std::string request;
@@ -161,8 +273,15 @@ bool OAuth2::GetCode( )
 	{
 		pfd.revents = 0;
 		poll( &pfd, 1, -1 );
+		
+		// POLLRDHUP detection: on systems that support it, check revents
+		// On systems without POLLRDHUP (or when it's defined as 0), 
+		// connection closure is detected when read() returns 0
+		#if POLLRDHUP != 0
 		if ( pfd.revents & POLLRDHUP )
 			break;
+		#endif
+		
 		int r = 1;
 		while ( r > 0 )
 		{
@@ -170,11 +289,18 @@ bool OAuth2::GetCode( )
 			if ( r > 0 )
 				request += std::string( buf, r );
 			else if ( r == 0 )
+				// Connection closed by peer
 				break;
 			else if ( errno != EAGAIN && errno != EINTR )
 				throw std::runtime_error( std::string("read: ") + strerror(errno) );
 		}
-		if ( r == 0 || ( r < 0 && request.find( "\n" ) > 0 ) ) // GET ... HTTP/1.1\r\n
+		
+		// Break if connection closed (read() returned 0)
+		if ( r == 0 )
+			break;
+			
+		// Break if we have some data and found a newline (HTTP header complete)
+		if ( r < 0 && request.find( "\n" ) > 0 ) // GET ... HTTP/1.1\r\n
 			break;
 	}
 	bool ok = false;
