@@ -115,9 +115,9 @@ int Main( int argc, char **argv )
 		( "help,h",		"Produce help message" )
 		( "version,v",	"Display Grive version" )
 		( "auth,a",		"Request authorization token" )
-                ( "id,i",               po::value<std::string>(), "Authentication ID")
-                ( "secret,e",           po::value<std::string>(), "Authentication secret")
-                ( "print-url",          "Only print url for request")
+		( "id,i",		po::value<std::string>(), "Authentication ID")
+		( "secret,e",	po::value<std::string>(), "Authentication secret")
+		( "print-url",	"Only print url for request")
 		( "path,p",		po::value<std::string>(), "Path to working copy root")
 		( "dir,s",		po::value<std::string>(), "Single subdirectory to sync")
 		( "verbose,V",	"Verbose mode. Enable more messages than normal.")
@@ -196,23 +196,21 @@ int Main( int argc, char **argv )
 
 		if ( vm.count("print-url") )
 		{
-			std::cout <<  token.MakeAuthURL() << std::endl ;
+			std::cout << token.MakeAuthURL() << std::endl ;
 			return 0 ;
 		}
 
 		std::cout
 			<< "-----------------------\n"
-			<< "Please go to this URL and get an authentication code:\n\n"
+			<< "Please open this URL in your browser to authenticate Grive2:\n\n"
 			<< token.MakeAuthURL()
 			<< std::endl ;
 
-		std::cout
-			<< "\n-----------------------\n"
-			<< "Please input the authentication code here: " << std::endl ;
-		std::string code ;
-		std::cin >> code ;
-
-		token.Auth( code ) ;
+		if ( !token.GetCode() )
+		{
+			std::cout << "Authentication failed\n";
+			return -1;
+		}
 
 		// save to config
 		config.Set( "id", Val( id ) ) ;

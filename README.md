@@ -1,6 +1,6 @@
-# Grive2 0.5.2-dev
+# Grive2 0.5.3
 
-13 Nov 2019, Vitaliy Filippov
+09 Nov 2022, Vitaliy Filippov
 
 http://yourcmc.ru/wiki/Grive2
 
@@ -39,10 +39,10 @@ grive -a
 
 A URL should be printed. Go to the link. You will need to login to your Google
 account if you haven't done so. After granting the permission to Grive, the
-browser will show you an authenication code. Copy-and-paste that to the
-standard input of Grive.
+authorization code will be forwarded to the Grive application and you will be
+redirected to a localhost web page confirming the authorization.
 
-If everything works fine, Grive will create .grive and .grive_state files in your
+If everything works fine, Grive will create .grive and .grive\_state files in your
 current directory. It will also start downloading files from your Google Drive to
 your current directory.
 
@@ -90,14 +90,17 @@ Prepare a Google Drive folder in your $HOME directory with `grive -a`.
 
 ```bash
 # 'google-drive' is the name of your Google Drive folder in your $HOME directory
-systemctl --user enable grive-timer@$(systemd-escape google-drive).timer
-systemctl --user start grive-timer@$(systemd-escape google-drive).timer
-systemctl --user enable grive-changes@$(systemd-escape google-drive).service
-systemctl --user start grive-changes@$(systemd-escape google-drive).service
+systemctl --user enable grive@$(systemd-escape google-drive).service
+systemctl --user start grive@$(systemd-escape google-drive).service
 ```
 
-You can enable and start these two units for multiple folders in your `$HOME`
+You can enable and start this unit for multiple folders in your `$HOME`
 directory if you need to sync with multiple google accounts.
+
+You can also only enable the time based syncing or the changes based syncing
+by only directly enabling and starting the corresponding unit:
+`grive-changes@$(systemd-escape google-drive).service` or 
+`grive-timer@$(systemd-escape google-drive).timer`.
 
 ### Shared files
 
@@ -200,7 +203,10 @@ Alternativly you can define your own client_id and client_secret during build
 
 ## Version History
 
-### Grive2 v0.5.2-dev
+### Grive2 v0.5.3
+
+- Implement Google OAuth loopback IP redirect flow
+- Various small fixes
 
 ### Grive2 v0.5.1
 
