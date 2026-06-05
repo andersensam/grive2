@@ -117,7 +117,7 @@ const Val& Val::operator[]( std::size_t index ) const
 std::string Val::Str() const
 {
 	if ( Type() == int_type )
-		return boost::to_string( As<long long>() );
+		return std::to_string( As<long long>() );
 	return As<std::string>() ;
 }
 

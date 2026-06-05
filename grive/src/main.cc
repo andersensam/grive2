@@ -38,9 +38,6 @@
 #include "util/log/CompositeLog.hh"
 #include "util/log/DefaultLog.hh"
 
-// boost header
-#include <boost/exception/all.hpp>
-#include <boost/program_options.hpp>
 
 // initializing libgcrypt, must be done in executable
 #include <gcrypt.h>
@@ -54,7 +51,6 @@ const std::string default_id            = APP_ID ;
 const std::string default_secret        = APP_SECRET ;
 
 using namespace gr ;
-namespace po = boost::program_options;
 
 // libgcrypt insist this to be done in application, not library
 void InitGCrypt()
@@ -69,15 +65,15 @@ void InitGCrypt()
 	gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
 }
 
-void InitLog( const po::variables_map& vm )
+void InitLog( const SimpleOptions& vm )
 {
 	std::unique_ptr<log::CompositeLog> comp_log( new log::CompositeLog ) ;
 	std::unique_ptr<LogBase> def_log( new log::DefaultLog );
 	LogBase* console_log = comp_log->Add( def_log ) ;
 
-	if ( vm.count( "log" ) )
+	if ( vm.options.count( "log" ) )
 	{
-		std::unique_ptr<LogBase> file_log( new log::DefaultLog( vm["log"].as<std::string>() ) ) ;
+		std::unique_ptr<LogBase> file_log( new log::DefaultLog( vm.Str("log") ) ) ;
 		file_log->Enable( log::debug ) ;
 		file_log->Enable( log::verbose ) ;
 		file_log->Enable( log::info ) ;
@@ -92,12 +88,12 @@ void InitLog( const po::variables_map& vm )
 		comp_log->Add( file_log ) ;
 	}
 
-	if ( vm.count( "verbose" ) )
+	if ( vm.flags.count( "verbose" ) )
 	{
 		console_log->Enable( log::verbose ) ;
 	}
 
-	if ( vm.count( "debug" ) )
+	if ( vm.flags.count( "debug" ) )
 	{
 		console_log->Enable( log::verbose ) ;
 		console_log->Enable( log::debug ) ;
@@ -109,52 +105,58 @@ int Main( int argc, char **argv )
 {
 	InitGCrypt() ;
 
-	// construct the program options
-	po::options_description desc( "Grive options" );
-	desc.add_options()
-		( "help,h",		"Produce help message" )
-		( "version,v",	"Display Grive version" )
-		( "auth,a",		"Request authorization token" )
-		( "id,i",		po::value<std::string>(), "Authentication ID")
-		( "secret,e",	po::value<std::string>(), "Authentication secret")
-		( "print-url",	"Only print url for request")
-		( "path,p",		po::value<std::string>(), "Path to working copy root")
-		( "dir,s",		po::value<std::string>(), "Single subdirectory to sync")
-		( "verbose,V",	"Verbose mode. Enable more messages than normal.")
-		( "log-http",	po::value<std::string>(), "Log all HTTP responses in this file for debugging.")
-		( "new-rev",	"Create new revisions in server for updated files.")
-		( "debug,d",	"Enable debug level messages. Implies -v.")
-		( "log,l",		po::value<std::string>(), "Set log output filename." )
-		( "force,f",	"Force grive to always download a file from Google Drive "
-						"instead of uploading it." )
-		( "upload-only,u", "Do not download anything from Google Drive, only upload local changes" )
-		( "no-remote-new,n", "Download only files that are changed in Google Drive and already exist locally" )
-		( "dry-run",	"Only detect which files need to be uploaded/downloaded, "
-						"without actually performing them." )
-		( "upload-speed,U", po::value<unsigned>(), "Limit upload speed in kbytes per second" )
-		( "download-speed,D", po::value<unsigned>(), "Limit download speed in kbytes per second" )
-		( "progress-bar,P", "Enable progress bar for upload/download of files")
-	;
-
-	po::variables_map vm;
-	try
-	{
-		po::store( po::parse_command_line( argc, argv, desc ), vm );
+	SimpleOptions vm;
+	for (int i = 1; i < argc; ++i) {
+		std::string arg = argv[i];
+		if (arg == "-h" || arg == "--help") vm.flags["help"] = true;
+		else if (arg == "-v" || arg == "--version") vm.flags["version"] = true;
+		else if (arg == "-a" || arg == "--auth") vm.flags["auth"] = true;
+		else if (arg == "--print-url") vm.flags["print-url"] = true;
+		else if (arg == "-V" || arg == "--verbose") vm.flags["verbose"] = true;
+		else if (arg == "--new-rev") vm.flags["new-rev"] = true;
+		else if (arg == "-d" || arg == "--debug") { vm.flags["debug"] = true; vm.flags["verbose"] = true; }
+		else if (arg == "-f" || arg == "--force") vm.flags["force"] = true;
+		else if (arg == "-u" || arg == "--upload-only") vm.flags["upload-only"] = true;
+		else if (arg == "-n" || arg == "--no-remote-new") vm.flags["no-remote-new"] = true;
+		else if (arg == "--dry-run") vm.flags["dry-run"] = true;
+		else if (arg == "-P" || arg == "--progress-bar") vm.flags["progress-bar"] = true;
+		else if (arg == "-i" || arg == "--id") { if (i+1 < argc) vm.options["id"] = argv[++i]; }
+		else if (arg == "-e" || arg == "--secret") { if (i+1 < argc) vm.options["secret"] = argv[++i]; }
+		else if (arg == "-p" || arg == "--path") { if (i+1 < argc) vm.options["path"] = argv[++i]; }
+		else if (arg == "-s" || arg == "--dir") { if (i+1 < argc) vm.options["dir"] = argv[++i]; }
+		else if (arg == "--log-http") { if (i+1 < argc) vm.options["log-http"] = argv[++i]; }
+		else if (arg == "-l" || arg == "--log") { if (i+1 < argc) vm.options["log"] = argv[++i]; }
+		else if (arg == "-U" || arg == "--upload-speed") { if (i+1 < argc) vm.uints["upload-speed"] = std::atoi(argv[++i]); }
+		else if (arg == "-D" || arg == "--download-speed") { if (i+1 < argc) vm.uints["download-speed"] = std::atoi(argv[++i]); }
 	}
-	catch( po::error &e )
-	{
-		std::cerr << "Options are incorrect. Use -h for help\n";
-		return -1;
-	}
-	po::notify( vm );
 
 	// simple commands that doesn't require log or config
-	if ( vm.count("help") )
+	if ( vm.flags.count("help") )
 	{
-		std::cout << desc << std::endl ;
+		std::cout << "Grive sync client (C++17)\nOptions:\n"
+			"  -h [ --help ]             Produce help message\n"
+			"  -v [ --version ]          Display Grive version\n"
+			"  -a [ --auth ]             Request authorization token\n"
+			"  -i [ --id ] arg           Authentication ID\n"
+			"  -e [ --secret ] arg       Authentication secret\n"
+			"  --print-url               Only print url for request\n"
+			"  -p [ --path ] arg         Path to working copy root\n"
+			"  -s [ --dir ] arg          Single subdirectory to sync\n"
+			"  -V [ --verbose ]          Verbose mode. Enable more messages than normal.\n"
+			"  --log-http arg            Log all HTTP responses in this file for debugging.\n"
+			"  --new-rev                 Create new revisions in server for updated files.\n"
+			"  -d [ --debug ]            Enable debug level messages. Implies -v.\n"
+			"  -l [ --log ] arg          Set log output filename.\n"
+			"  -f [ --force ]            Force grive to always download a file from Google Drive\n"
+			"  -u [ --upload-only ]      Do not download anything from Google Drive, only upload local changes\n"
+			"  -n [ --no-remote-new ]    Download only files that are changed in Google Drive and already exist locally\n"
+			"  --dry-run                 Only detect which files need to be uploaded/downloaded\n"
+			"  -U [ --upload-speed ] arg Limit upload speed in kbytes per second\n"
+			"  -D [ --download-speed ] arg Limit download speed in kbytes per second\n"
+			"  -P [ --progress-bar ]     Enable progress bar for upload/download of files\n";
 		return 0 ;
 	}
-	else if ( vm.count( "version" ) )
+	else if ( vm.flags.count( "version" ) )
 	{
 		std::cout
 			<< "grive version " << VERSION << ' ' << __DATE__ << ' ' << __TIME__ << std::endl ;
@@ -173,28 +175,28 @@ int Main( int argc, char **argv )
 #else
 	std::unique_ptr<http::Agent> http( new http::CurlAgent );
 #endif
-	if ( vm.count( "log-http" ) )
-		http->SetLog( new http::ResponseLog( vm["log-http"].as<std::string>(), ".txt" ) );
+	if ( vm.options.count( "log-http" ) )
+		http->SetLog( new http::ResponseLog( vm.Str("log-http"), ".txt" ) );
 
 	std::unique_ptr<ProgressBar> pb;
-	if ( vm.count( "progress-bar" ) )
+	if ( vm.flags.count( "progress-bar" ) )
 	{
 		pb.reset( new ProgressBar() );
 		http->SetProgressReporter( pb.get() );
 	}
 
-	if ( vm.count( "auth" ) )
+	if ( vm.flags.count( "auth" ) )
 	{
-		std::string id = vm.count( "id" ) > 0
-                        ? vm["id"].as<std::string>()
+		std::string id = vm.options.count( "id" ) > 0
+                        ? vm.Str("id")
                         : default_id ;
-		std::string secret = vm.count( "secret" ) > 0
-                        ? vm["secret"].as<std::string>()
+		std::string secret = vm.options.count( "secret" ) > 0
+                        ? vm.Str("secret")
                         : default_secret ;
 
 		OAuth2 token( http.get(), id, secret ) ;
 
-		if ( vm.count("print-url") )
+		if ( vm.flags.count("print-url") )
 		{
 			std::cout << token.MakeAuthURL() << std::endl ;
 			return 0 ;
@@ -242,17 +244,17 @@ int Main( int argc, char **argv )
 	AuthAgent agent( token, http.get() ) ;
 	v2::Syncer2 syncer( &agent );
 
-	if ( vm.count( "upload-speed" ) > 0 )
-		agent.SetUploadSpeed( vm["upload-speed"].as<unsigned>() * 1000 );
-	if ( vm.count( "download-speed" ) > 0 )
-		agent.SetDownloadSpeed( vm["download-speed"].as<unsigned>() * 1000 );
+	if ( vm.uints.count( "upload-speed" ) > 0 )
+		agent.SetUploadSpeed( vm.Uint("upload-speed") * 1000 );
+	if ( vm.uints.count( "download-speed" ) > 0 )
+		agent.SetDownloadSpeed( vm.Uint("download-speed") * 1000 );
 
 	DateTime startTime = DateTime::Now();
 	Log( "\nStarted at %1%", startTime, log::info );
 	Drive drive( &syncer, config.GetAll() );
 	drive.DetectChanges() ;
 
-	if ( vm.count( "dry-run" ) == 0 )
+	if ( vm.flags.count( "dry-run" ) == 0 )
 	{
 		// The progress bar should just be enabled when actual file transfers take place
 		if ( pb )
@@ -284,7 +286,7 @@ int main( int argc, char **argv )
 	}
 	catch ( Exception& e )
 	{
-		Log( "exception: %1%", boost::diagnostic_information(e), log::critical ) ;
+		Log( "exception: %1%", e.what(), log::critical ) ;
 	}
 	catch ( std::exception& e )
 	{

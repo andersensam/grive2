@@ -30,9 +30,6 @@
 #include "util/File.hh"
 #include "http/Error.hh"
 
-#include <boost/exception/all.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/bind.hpp>
 
 #include <errno.h>
 
@@ -79,8 +76,8 @@ void Resource::SetState( State new_state )
 	) ;
 	
 	m_state = new_state ;
-	std::for_each( m_child.begin(), m_child.end(),
-		boost::bind( &Resource::SetState, _1, new_state ) ) ;
+	for ( auto* child : m_child )
+		child->SetState( new_state ) ;
 }
 
 void Resource::FromRemoteFolder( const Entry& remote )
@@ -267,11 +264,10 @@ void Resource::FromLocal( Val& state )
 		{
 			os::Stat( path, &m_ctime, (off64_t*)&m_size, &ft ) ;
 		}
-		catch ( os::Error &e )
+		catch ( const os::Error &e )
 		{
 			// invalid symlink, unreadable file or something else
-			int const* eno = boost::get_error_info< boost::errinfo_errno >(e);
-			Log( "Error accessing %1%: %2%; skipping file", path.string(), strerror( *eno ), log::warning );
+			Log( "Error accessing %1%: %2%; skipping file", path.string(), e.what(), log::warning );
 			m_state = sync;
 			m_kind = "bad";
 			return;
@@ -408,7 +404,7 @@ fs::path Resource::Path() const
 	assert( m_parent != this ) ;
 	assert( m_parent == 0 || m_parent->IsFolder() ) ;
 
-	return m_parent != 0 ? (m_parent->Path() / m_name) : m_name ;
+	return m_parent != 0 ? (m_parent->Path() / m_name) : fs::path(m_name) ;
 }
 
 // Path relative to the root directory
@@ -417,7 +413,7 @@ fs::path Resource::RelPath() const
 	assert( m_parent != this ) ;
 	assert( m_parent == 0 || m_parent->IsFolder() ) ;
 
-	return m_parent != 0 && !m_parent->IsRoot() ? (m_parent->RelPath() / m_name) : m_name ;
+	return m_parent != 0 && !m_parent->IsRoot() ? (m_parent->RelPath() / m_name) : fs::path(m_name) ;
 }
 
 bool Resource::IsInRootTree() const
@@ -464,21 +460,14 @@ void Resource::Sync( Syncer *syncer, ResourceTree *res_tree, const Val& options 
 		// Use standard exception handling instead of Boost error_info
 		const char* msg = e.what();
 		Log( "Error syncing %1%: %2%", Path(), msg, log::error );
-		// For detailed error info, we would need to extend the http::Error class
-		// to include additional methods for accessing error details
-	}
-		if ( resp_hdr )
-			Log( "Response headers: %1%", *resp_hdr, log::verbose );
-		if ( resp_txt )
-			Log( "Response text: %1%", *resp_txt, log::verbose );
 		return;
 	}
 	
 	// if myself is deleted, no need to do the childrens
 	if ( m_state != local_deleted && m_state != remote_deleted )
 	{
-		std::for_each( m_child.begin(), m_child.end(),
-			boost::bind( &Resource::Sync, _1, syncer, res_tree, options ) ) ;
+		for ( auto* child : m_child )
+			child->Sync( syncer, res_tree, options ) ;
 	}
 }
 
@@ -662,8 +651,6 @@ void Resource::SetServerTime( const DateTime& time )
 /// this function doesn't really remove the local file. it renames it.
 void Resource::DeleteLocal()
 {
-	static const boost::format trash_file( "%1%-%2%" ) ;
-
 	assert( m_parent != NULL ) ;
 	Resource* p = m_parent;
 	fs::path destdir;
@@ -677,7 +664,7 @@ void Resource::DeleteLocal()
 	fs::path dest = destdir / Name();
 	std::size_t idx = 1 ;
 	while ( fs::exists( dest ) && idx != 0 )
-		dest = destdir / (boost::format(trash_file) % Name() % idx++).str() ;
+		dest = destdir / (Name() + "-" + std::to_string(idx++)) ;
 
 	// wrap around! just remove the file
 	if ( idx == 0 )

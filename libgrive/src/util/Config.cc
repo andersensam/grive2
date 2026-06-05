@@ -23,12 +23,8 @@
 #include "json/JsonWriter.hh"
 #include "json/JsonParser.hh"
 
-#include <boost/program_options.hpp>
-
 #include <iostream>
 #include <iterator>
-
-namespace po = boost::program_options;
 
 namespace gr {
 
@@ -36,25 +32,25 @@ const std::string	default_filename	= ".grive";
 const char			*env_name			= "GR_CONFIG";
 const std::string	default_root_folder = ".";
 
-Config::Config( const po::variables_map& vm )
+Config::Config( const SimpleOptions& vm )
 {
-	if ( vm.count( "id" ) > 0 )
-		m_cmd.Add( "id",	Val( vm["id"].as<std::string>() ) ) ;
-	if ( vm.count( "secret" ) > 0 )
-		m_cmd.Add( "secret",	Val( vm["secret"].as<std::string>() ) ) ;
-	m_cmd.Add( "new-rev",	Val(vm.count("new-rev") > 0) ) ;
-	m_cmd.Add( "force",		Val(vm.count("force") > 0 ) ) ;
-	m_cmd.Add( "path",		Val(vm.count("path") > 0
-		? vm["path"].as<std::string>()
+	if ( vm.options.count( "id" ) > 0 )
+		m_cmd.Add( "id",	Val( vm.Str("id") ) ) ;
+	if ( vm.options.count( "secret" ) > 0 )
+		m_cmd.Add( "secret",	Val( vm.Str("secret") ) ) ;
+	m_cmd.Add( "new-rev",	Val( vm.Bool("new-rev") ) ) ;
+	m_cmd.Add( "force",		Val( vm.Bool("force") ) ) ;
+	m_cmd.Add( "path",		Val( vm.options.count("path") > 0
+		? vm.Str("path")
 		: default_root_folder ) ) ;
-	m_cmd.Add( "dir",		Val(vm.count("dir") > 0
-		? vm["dir"].as<std::string>()
+	m_cmd.Add( "dir",		Val( vm.options.count("dir") > 0
+		? vm.Str("dir")
 		: "" ) ) ;
-	if ( vm.count( "ignore" ) > 0 )
-		m_cmd.Add( "ignore",	Val( vm["ignore"].as<std::string>() ) );
-	m_cmd.Add( "no-remote-new", Val( vm.count( "no-remote-new" ) > 0 || vm.count( "upload-only" ) > 0 ) );
-	m_cmd.Add( "upload-only", Val( vm.count( "upload-only" ) > 0 ) );
-	m_cmd.Add( "no-delete-remote", Val( vm.count( "no-delete-remote" ) > 0 ) );
+	if ( vm.options.count( "ignore" ) > 0 )
+		m_cmd.Add( "ignore",	Val( vm.Str("ignore") ) );
+	m_cmd.Add( "no-remote-new", Val( vm.flags.count( "no-remote-new" ) > 0 || vm.flags.count( "upload-only" ) > 0 ) );
+	m_cmd.Add( "upload-only", Val( vm.flags.count( "upload-only" ) > 0 ) );
+	m_cmd.Add( "no-delete-remote", Val( vm.flags.count( "no-delete-remote" ) > 0 ) );
 	
 	m_path	= GetPath( fs::path(m_cmd["path"].Str()) ) ;
 	m_file	= Read( ) ;

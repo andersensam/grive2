@@ -7,9 +7,6 @@ if (NOT APPLE)
     find_package(CURL REQUIRED)
 endif(NOT APPLE)
 find_package(Backtrace)
-# Modern Boost (1.70+) has header-only libraries, but some components still need to be found
-# For Boost >= 1.70, use the "COMPONENTS" syntax but the libraries are header-only
-find_package(Boost 1.70.0 REQUIRED COMPONENTS program_options filesystem unit_test_framework regex)
 find_package(BFD)
 find_package(CppUnit)
 find_package(Iberty)
@@ -47,9 +44,10 @@ endif ( IBERTY_FOUND )
 include_directories(
 	${libgrive_SOURCE_DIR}/src
 	${libgrive_SOURCE_DIR}/test
-	${Boost_INCLUDE_DIRS}
 	${OPT_INCS}
 	${YAJL_INCLUDE_DIRS}
+	${YAJL_INCLUDE_DIRS}/..
+	/opt/homebrew/include
 )
 
 file (GLOB PROTOCOL_HEADERS
@@ -90,7 +88,6 @@ target_link_libraries( grive
 	${YAJL_LIBRARIES}
 	${CURL_LIBRARIES}
 	${LIBGCRYPT_LIBRARIES}
-	${Boost_LIBRARIES}
 	${CMAKE_DL_LIBS}
 	${CMAKE_DL_LIBS}  # For std::filesystem on some systems
 	${IBERTY_LIBRARY}
@@ -140,23 +137,6 @@ IF ( CPPUNIT_FOUND )
 
 ENDIF ( CPPUNIT_FOUND )
 
-file(GLOB BTEST_SRC
-	test/btest/*.cc
-)
-
-add_executable( btest ${BTEST_SRC} )
-
-target_link_libraries( btest
-	grive
-	${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
-)
-
 if ( ${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD" )
   set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-c++11-narrowing" )
 endif ( ${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD" )
-
-if ( WIN32 )
-else ( WIN32 )
-	set_target_properties( btest
-		PROPERTIES COMPILE_FLAGS	 -DBOOST_TEST_DYN_LINK )
-endif (WIN32)

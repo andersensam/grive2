@@ -21,7 +21,7 @@
 
 #include "util/Exception.hh"
 
-#include <boost/iterator_adaptors.hpp>
+#include <iterator>
 
 #include <iosfwd>
 #include <string>
@@ -95,22 +95,40 @@ private :
 	Impl *m_ptr ;
 } ;
 
-class Node::iterator : public boost::iterator_adaptor<
-	Node::iterator,
-	Node::ImplVec::iterator,
-	Node,
-	boost::random_access_traversal_tag,
-	Node
->
+class Node::iterator
 {
 public :
+	using iterator_category = std::random_access_iterator_tag;
+	using value_type = Node;
+	using difference_type = std::ptrdiff_t;
+	using pointer = Node*;
+	using reference = Node;
+
 	iterator( ) ;
-	explicit iterator( ImplVec::iterator i ) ;		
+	explicit iterator( ImplVec::const_iterator i ) ;		
+
+	reference operator*() const ;
+
+	iterator& operator++() ;
+	iterator operator++(int) ;
+	iterator& operator--() ;
+	iterator operator--(int) ;
+
+	iterator& operator+=(difference_type n) ;
+	iterator operator+(difference_type n) const ;
+	iterator& operator-=(difference_type n) ;
+	iterator operator-(difference_type n) const ;
+	difference_type operator-(const iterator& other) const ;
+
+	bool operator==(const iterator& other) const ;
+	bool operator!=(const iterator& other) const ;
+	bool operator<(const iterator& other) const ;
+	bool operator<=(const iterator& other) const ;
+	bool operator>(const iterator& other) const ;
+	bool operator>=(const iterator& other) const ;
 
 private :
-	friend class boost::iterator_core_access;
-	
-	reference dereference() const ;
+	ImplVec::const_iterator m_it ;
 } ;
 
 std::ostream& operator<<( std::ostream& os, const Node& node ) ;

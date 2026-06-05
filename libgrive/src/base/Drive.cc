@@ -27,7 +27,6 @@
 #include "util/Destroy.hh"
 #include "util/log/Log.hh"
 
-#include <boost/bind.hpp>
 
 // standard C++ library
 #include <algorithm>
@@ -80,9 +79,8 @@ void Drive::DetectChanges()
 
 	while ( feed->GetNext( m_syncer->Agent() ) )
 	{
-		std::for_each(
-			feed->begin(), feed->end(),
-			boost::bind( &Drive::FromRemote, this, _1 ) ) ;
+		for ( const auto& entry : *feed )
+			FromRemote( entry ) ;
 	}
 	m_state.ResolveEntry() ;
 }
@@ -99,9 +97,8 @@ void Drive::ReadChanges()
 		std::unique_ptr<Feed> feed = m_syncer->GetChanges( prev_stamp+1 ) ;
 		while ( feed->GetNext( m_syncer->Agent() ) )
 		{
-			std::for_each(
-				feed->begin(), feed->end(),
-				boost::bind( &Drive::FromChange, this, _1 ) ) ;
+			for ( const auto& entry : *feed )
+				FromChange( entry ) ;
 		}
 	}
 }

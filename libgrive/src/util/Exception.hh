@@ -19,15 +19,25 @@
 
 #pragma once
 
-#include <boost/exception/exception.hpp>
-#include <boost/exception/info.hpp>
-
 #include <exception>
 #include <string>
+#include <sstream>
+#include <type_traits>
+#include <cstring>
+
+#ifndef BOOST_THROW_EXCEPTION
+#define BOOST_THROW_EXCEPTION(x) throw (x)
+#endif
 
 namespace gr {
 
 class Backtrace ;
+
+template <typename Tag, typename T>
+struct ErrorInfo {
+	T value;
+	ErrorInfo(const T& v) : value(v) {}
+};
 
 /**	\defgroup	exception	Exception Classes
 */
@@ -37,21 +47,64 @@ class Backtrace ;
 	This class is the base class for all exception class in WebWrite.
 	It allows us to catch all WebWrite exception with one catch clause.
 */
-struct Exception :
-	virtual public std::exception,
-	virtual public boost::exception
+struct Exception : virtual public std::exception
 {
-	Exception( ) ;
+	mutable std::string m_details;
+
+	Exception( const std::string& msg = "" ) ;
+	virtual ~Exception() throw() ;
 	
-	virtual const char* what() const throw() ;
+	virtual const char* what() const throw() override ;
 } ;
 
 /// Exception informations
 namespace expt
 {
+	struct BacktraceTag {};
+	struct ApiFunctionTag {};
+	struct ErrnoTag {};
+	struct FileNameTag {};
+	struct FileOpenModeTag {};
+	struct FileHandleTag {};
+	struct AtLineTag {};
+
 	// back-trace information. should be present for all exceptions
-	typedef boost::error_info<struct BacktraceTag, Backtrace>	Backtrace_ ;
+	typedef ErrorInfo<BacktraceTag, Backtrace>	Backtrace_ ;
+	typedef ErrorInfo<ApiFunctionTag, std::string> errinfo_api_function ;
+	typedef ErrorInfo<ErrnoTag, int> errinfo_errno ;
+	typedef ErrorInfo<FileNameTag, std::string> errinfo_file_name ;
+	typedef ErrorInfo<FileOpenModeTag, std::string> errinfo_file_open_mode ;
+	typedef ErrorInfo<FileHandleTag, void*> errinfo_file_handle ;
+	typedef ErrorInfo<AtLineTag, int> errinfo_at_line ;
 }
 
-} // end of namespace
+	template <class E, class Tag, class T>
+	inline E const & operator<<( E const & x, const ErrorInfo<Tag,T>& info ) {
+		if (!x.m_details.empty()) {
+			x.m_details += "; ";
+		}
+		std::ostringstream ss;
+		if constexpr (std::is_same_v<Tag, expt::ErrnoTag>) {
+			ss << std::strerror(info.value);
+		} else {
+			ss << info.value;
+		}
+		x.m_details += ss.str();
+		return x;
+	}
+
+} // end of namespace gr
+
+namespace boost {
+	template <typename Tag, typename T>
+	using error_info = gr::ErrorInfo<Tag, T>;
+
+	using gr::expt::errinfo_api_function;
+	using gr::expt::errinfo_errno;
+	using gr::expt::errinfo_file_name;
+	using gr::expt::errinfo_file_open_mode;
+	using gr::expt::errinfo_file_handle;
+	using gr::expt::errinfo_at_line;
+}
+
 

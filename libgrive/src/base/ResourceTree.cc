@@ -32,20 +32,19 @@ using namespace details ;
 ResourceTree::ResourceTree( const fs::path& rootFolder ) :
 	m_root( new Resource( rootFolder ) )
 {
-	m_set.insert( m_root ) ;
+	Insert( m_root ) ;
 }
 
 ResourceTree::ResourceTree( const ResourceTree& fs ) :
 	m_root( 0 )
 {
-	const Set& s = fs.m_set.get<ByIdentity>() ;
-	for ( Set::const_iterator i = s.begin() ; i != s.end() ; ++i )
+	for ( auto* r : fs.m_resources )
 	{
-		Resource *c = new Resource( **i ) ;
+		Resource *c = new Resource( *r ) ;
 		if ( c->IsRoot() )
 			m_root = c ;
 		
-		m_set.insert( c ) ;
+		Insert( c ) ;
 	}
 	
 	assert( m_root != 0 ) ;
@@ -58,11 +57,13 @@ ResourceTree::~ResourceTree( )
 
 void ResourceTree::Clear()
 {
-	// delete all pointers
-	const Set& s = m_set.get<ByIdentity>() ;
-	std::for_each( s.begin(), s.end(), Destroy() ) ;
+	for ( auto* r : m_resources )
+		delete r ;
 	
-	m_set.clear() ;
+	m_resources.clear() ;
+	m_by_href.clear() ;
+	m_last_md5_query.clear() ;
+	m_last_size_query.clear() ;
 	m_root = 0 ;
 }
 
@@ -80,46 +81,62 @@ const Resource* ResourceTree::Root() const
 
 Resource* ResourceTree::FindByHref( const std::string& href )
 {
-	// for the resource that not yet have href (e.g. not yet fetched from server)
-	// their href will be empty.
 	if ( href.empty() )
 		return 0 ;
 
-	HrefMap& map = m_set.get<ByHref>() ;
-	HrefMap::iterator i = map.find( href ) ;
-	return i != map.end() ? *i : 0 ;
+	auto i = m_by_href.find( href ) ;
+	return i != m_by_href.end() ? i->second : 0 ;
 }
 
 const Resource* ResourceTree::FindByHref( const std::string& href ) const
 {
-	const HrefMap& map = m_set.get<ByHref>() ;
-	HrefMap::const_iterator i = map.find( href ) ;
-	return i != map.end() ? *i : 0 ;
+	if ( href.empty() )
+		return 0 ;
+
+	auto i = m_by_href.find( href ) ;
+	return i != m_by_href.end() ? i->second : 0 ;
 }
 
 MD5Range ResourceTree::FindByMD5( const std::string& md5 )
 {
-	MD5Map& map = m_set.get<ByMD5>() ;
+	m_last_md5_query.clear() ;
 	if ( !md5.empty() )
-		return map.equal_range( md5 );
-	return MD5Range( map.end(), map.end() ) ;
+	{
+		for ( auto* r : m_resources )
+		{
+			if ( r->MD5() == md5 )
+				m_last_md5_query.push_back( r ) ;
+		}
+	}
+	return MD5Range( m_last_md5_query.begin(), m_last_md5_query.end() ) ;
 }
 
 SizeRange ResourceTree::FindBySize( u64_t size )
 {
-	SizeMap& map = m_set.get<BySize>() ;
-	return map.equal_range( size );
+	m_last_size_query.clear() ;
+	for ( auto* r : m_resources )
+	{
+		if ( r->Size() == size )
+			m_last_size_query.push_back( r ) ;
+	}
+	return SizeRange( m_last_size_query.begin(), m_last_size_query.end() ) ;
 }
 
 ///	Reinsert should be called when the ID/HREF/MD5 were updated
 bool ResourceTree::ReInsert( Resource *coll )
 {
-	Set& s = m_set.get<ByIdentity>() ;
-	Set::iterator i = s.find( coll ) ;
-	if ( i != s.end() )
+	auto i = m_resources.find( coll ) ;
+	if ( i != m_resources.end() )
 	{
-		s.erase( i ) ;
-		m_set.insert( coll ) ;
+		for ( auto it = m_by_href.begin(); it != m_by_href.end(); )
+		{
+			if ( it->second == coll )
+				it = m_by_href.erase( it ) ;
+			else
+				++it ;
+		}
+		if ( !coll->SelfHref().empty() )
+			m_by_href[coll->SelfHref()] = coll ;
 		return true ;
 	}
 	else
@@ -128,13 +145,26 @@ bool ResourceTree::ReInsert( Resource *coll )
 
 void ResourceTree::Insert( Resource *coll )
 {
-	m_set.insert( coll ) ;
+	if ( coll && m_resources.insert( coll ).second )
+	{
+		if ( !coll->SelfHref().empty() )
+			m_by_href[coll->SelfHref()] = coll ;
+	}
 }
 
 void ResourceTree::Erase( Resource *coll )
 {
-	Set& s = m_set.get<ByIdentity>() ;
-	s.erase( s.find( coll ) ) ;
+	if ( coll )
+	{
+		m_resources.erase( coll ) ;
+		for ( auto it = m_by_href.begin(); it != m_by_href.end(); )
+		{
+			if ( it->second == coll )
+				it = m_by_href.erase( it ) ;
+			else
+				++it ;
+		}
+	}
 }
 
 void ResourceTree::Update( Resource *coll, const Entry& e )
@@ -147,12 +177,12 @@ void ResourceTree::Update( Resource *coll, const Entry& e )
 
 ResourceTree::iterator ResourceTree::begin()
 {
-	return m_set.get<ByIdentity>().begin() ;
+	return m_resources.begin() ;
 }
 
 ResourceTree::iterator ResourceTree::end()
 {
-	return m_set.get<ByIdentity>().end() ;
+	return m_resources.end() ;
 }
 
 } // end of namespace gr

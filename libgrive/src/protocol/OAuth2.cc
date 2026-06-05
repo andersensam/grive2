@@ -30,6 +30,7 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 // Cross-platform polling implementation
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__)

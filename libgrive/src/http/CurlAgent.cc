@@ -26,7 +26,6 @@
 #include "util/DataStream.hh"
 #include "util/File.hh"
 
-#include <boost/throw_exception.hpp>
 
 #include <algorithm>
 #include <cassert>

@@ -22,25 +22,25 @@
 #include "bfd/Backtrace.hh"
 #include "bfd/Debug.hh"
 
-#include <boost/exception/all.hpp>
-
 #include <cstdlib>
 #include <iterator>
 
 namespace gr {
 
-class Backtrace ;
-
-Exception::Exception( )
+Exception::Exception( const std::string& msg ) : m_details(msg)
 {
 #ifdef HAVE_BFD
 	*this << expt::Backtrace_( Backtrace() ) ;
 #endif
 }
 
+Exception::~Exception() throw()
+{
+}
+
 const char* Exception::what() const throw()
 {
-	return boost::diagnostic_information_what( *this ) ;
+	return m_details.c_str() ;
 }
 
 } // end of namespace

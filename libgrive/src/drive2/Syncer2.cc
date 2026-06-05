@@ -35,7 +35,6 @@
 #include "util/StringStream.hh"
 #include "util/ConcatStream.hh"
 
-#include <boost/exception/all.hpp>
 
 #include <cassert>
 
@@ -223,7 +222,7 @@ std::unique_ptr<Feed> Syncer2::GetAll()
 
 std::string ChangesFeed( long changestamp, int maxResults = 1000 )
 {
-	boost::format feed( feeds::changes + "?maxResults=%1%&includeSubscribed=false" + ( changestamp > 0 ? "&startChangeId=%2%" : "" ) ) ;
+	log::Format feed( feeds::changes + "?maxResults=%1%&includeSubscribed=false" + ( changestamp > 0 ? "&startChangeId=%2%" : "" ) ) ;
 	return ( changestamp > 0 ? feed % maxResults % changestamp : feed % maxResults ).str() ;
 }
 

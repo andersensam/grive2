@@ -57,12 +57,29 @@ void ResourceTest::TestNormal( )
 	Val st;
 	st.Add( "srv_time", Val( DateTime( "2012-05-09T16:13:22.401Z" ).Sec() ) );
 	subject.FromLocal( st ) ;
-	GRUT_ASSERT_EQUAL( subject.MD5(), "c0742c0a32b2c909b6f176d17a6992d0" ) ;
+	GRUT_ASSERT_EQUAL( subject.GetMD5(), "c0742c0a32b2c909b6f176d17a6992d0" ) ;
 	GRUT_ASSERT_EQUAL( subject.StateStr(), "local_new" ) ;
 	
 	Val entry;
+	entry.Set( "kind", Val( std::string( "drive#file" ) ) );
+	entry.Set( "id", Val( std::string( "id123" ) ) );
+	entry.Set( "title", Val( std::string( "entry.xml" ) ) );
+	entry.Set( "etag", Val( std::string( "etag123" ) ) );
+	entry.Set( "selfLink", Val( std::string( "https://..." ) ) );
 	entry.Set( "modifiedDate", Val( std::string( "2012-05-09T16:13:22.401Z" ) ) );
+	entry.Set( "mimeType", Val( std::string( "text/xml" ) ) );
+	entry.Set( "editable", Val( true ) );
+	
+	Val labels;
+	labels.Set( "trashed", Val( false ) );
+	entry.Set( "labels", labels );
+	
 	entry.Set( "md5Checksum", Val( std::string( "DIFFERENT" ) ) );
+	entry.Set( "downloadUrl", Val( std::string( "https://..." ) ) );
+	entry.Set( "fileSize", Val( (long long)100 ) );
+	
+	Val parents( Val::array_type );
+	entry.Set( "parents", parents );
 	
 	Entry2 remote( entry ) ;
 	GRUT_ASSERT_EQUAL( "different", remote.MD5() ) ;

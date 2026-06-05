@@ -24,7 +24,7 @@
 #include <string>
 #include <memory>
 
-#include <boost/filesystem.hpp>
+#include "util/FileSystem.hh"
 
 namespace gr {
 
@@ -43,7 +43,7 @@ public :
 	~MD5() ;
 
 	static std::string Get( File& file ) ;
-	static std::string Get( const boost::filesystem::path& file ) ;
+	static std::string Get( const fs::path& file ) ;
 	
 	void Write( const void *data, std::size_t size ) ;
 	std::string Get() const ;

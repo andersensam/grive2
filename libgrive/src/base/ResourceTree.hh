@@ -23,35 +23,26 @@
 
 #include "util/FileSystem.hh"
 
-#include <boost/multi_index_container.hpp>
-#include <boost/multi_index/hashed_index.hpp>
-#include <boost/multi_index/identity.hpp>
-#include <boost/multi_index/mem_fun.hpp>
+#include <set>
+#include <vector>
+#include <unordered_map>
+#include <string>
+#include <utility>
 
 namespace gr {
 
 namespace details
 {
-	using namespace boost::multi_index ;
-	struct ByMD5 {} ;
-	struct ByHref {} ;
-	struct ByIdentity {} ;
-	struct BySize {} ;
+	struct Set {
+		typedef std::set<Resource*>::const_iterator iterator;
+	};
+	struct MD5Map {
+		typedef std::vector<Resource*>::const_iterator iterator;
+	};
+	struct SizeMap {
+		typedef std::vector<Resource*>::const_iterator iterator;
+	};
 
-	typedef multi_index_container<
-		Resource*,
-		indexed_by<
-			hashed_non_unique<tag<ByHref>,	const_mem_fun<Resource, std::string,	&Resource::SelfHref> >,
-			hashed_non_unique<tag<ByMD5>,	const_mem_fun<Resource, std::string,	&Resource::MD5> >,
-			hashed_non_unique<tag<BySize>,	const_mem_fun<Resource, u64_t,			&Resource::Size> >,
-			hashed_unique<tag<ByIdentity>,	identity<Resource*> >
-		>
-	> Folders ;
-	
-	typedef Folders::index<ByMD5>::type			MD5Map ;
-	typedef Folders::index<ByHref>::type		HrefMap ;
-	typedef Folders::index<BySize>::type		SizeMap ;
-	typedef Folders::index<ByIdentity>::type	Set ;
 	typedef std::pair<SizeMap::iterator, SizeMap::iterator> SizeRange ;
 	typedef std::pair<MD5Map::iterator, MD5Map::iterator> MD5Range ;
 }
@@ -59,7 +50,6 @@ namespace details
 /*!	\brief	A simple container for storing folders
 
 	This class stores a set of folders and provide fast search access from ID, HREF etc.
-	It is a wrapper around multi_index_container from Boost library.
 */
 class ResourceTree
 {
@@ -92,7 +82,10 @@ private :
 	void Clear() ;
 
 private :
-	details::Folders	m_set ;
+	std::set<Resource*> m_resources ;
+	std::unordered_map<std::string, Resource*> m_by_href ;
+	std::vector<Resource*> m_last_md5_query ;
+	std::vector<Resource*> m_last_size_query ;
 	Resource*			m_root ;
 } ;
 

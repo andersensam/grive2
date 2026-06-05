@@ -21,19 +21,12 @@
 
 #include <cassert>
 
-// boost headers
-#include <boost/throw_exception.hpp>
-#include <boost/exception/errinfo_api_function.hpp>
-#include <boost/exception/errinfo_errno.hpp>
-#include <boost/exception/errinfo_file_name.hpp>
-#include <boost/exception/errinfo_file_open_mode.hpp>
-#include <boost/exception/info.hpp>
 
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fcntl.h>
 
-#if defined(__FreeBSD__) || defined(__OpenBSD__)
+#ifndef WIN32
 #include <unistd.h>
 #endif
 

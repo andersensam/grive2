@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.5)
 project(grive2)
 
 include(GNUInstallDirs)
@@ -10,6 +10,7 @@ message(WARNING "Version to build: ${GRIVE_VERSION}")
 # common compile options
 add_definitions( -DVERSION="${GRIVE_VERSION}" )
 add_definitions( -D_FILE_OFFSET_BITS=64 -std=c++17 )
+link_directories(/opt/homebrew/lib /usr/local/lib)
 
 if ( APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD" OR ${CMAKE_SYSTEM_NAME} MATCHES "OpenBSD" )
 	add_definitions( -Doff64_t=off_t )

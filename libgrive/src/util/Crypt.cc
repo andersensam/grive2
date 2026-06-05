@@ -27,7 +27,6 @@
 
 // dependent libraries
 #include <gcrypt.h>
-#include <boost/throw_exception.hpp>
 
 namespace gr { namespace crypt {
 

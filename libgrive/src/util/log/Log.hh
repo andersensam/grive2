@@ -19,8 +19,52 @@
 
 #pragma once
 
-#include <boost/format.hpp>
 #include <memory>
+#include <string>
+#include <sstream>
+#include <ostream>
+
+namespace gr {
+namespace log {
+	class Format
+	{
+	public:
+		Format( const std::string& fmt = "" ) : m_fmt(fmt), m_next_arg(1) {}
+
+		template <typename T>
+		Format& operator%( const T& x ) {
+			std::ostringstream ss;
+			ss << x;
+			std::string s = ss.str();
+
+			std::string marker = "%" + std::to_string(m_next_arg) + "%";
+			size_t pos = 0;
+			while ((pos = m_fmt.find(marker, pos)) != std::string::npos) {
+				m_fmt.replace(pos, marker.length(), s);
+				pos += s.length();
+			}
+			m_next_arg++;
+			return *this;
+		}
+
+		std::string str() const {
+			return m_fmt;
+		}
+
+		friend std::ostream& operator<<( std::ostream& os, const Format& f ) {
+			return os << f.m_fmt;
+		}
+
+	private:
+		std::string m_fmt;
+		int m_next_arg;
+	};
+}
+}
+
+namespace boost {
+	typedef gr::log::Format format;
+}
 
 namespace gr {
 
@@ -53,7 +97,7 @@ namespace log
 		serverity_count
 	} ;
 	
-	typedef boost::format Fmt ;
+	typedef Format Fmt ;
 }
 
 /*!	\brief	Base class and singleton of log facilities

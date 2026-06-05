@@ -28,13 +28,39 @@
 
 namespace gr {
 
+struct SimpleOptions {
+	std::map<std::string, std::string> options;
+	std::map<std::string, bool> flags;
+	std::map<std::string, unsigned> uints;
+
+	bool Has( const std::string& key ) const {
+		return flags.count(key) || options.count(key) || uints.count(key);
+	}
+	
+	std::string Str( const std::string& key ) const {
+		auto it = options.find(key);
+		return it != options.end() ? it->second : "";
+	}
+	
+	bool Bool( const std::string& key ) const {
+		auto it = flags.find(key);
+		return it != flags.end() ? it->second : false;
+	}
+	
+	unsigned Uint( const std::string& key ) const {
+		auto it = uints.find(key);
+		return it != uints.end() ? it->second : 0;
+	}
+};
+
 class Config
 {
 public :
+	using SimpleOptions = gr::SimpleOptions;
 	struct Error : virtual Exception {} ;
-	typedef boost::error_info<struct FileTag, std::string>	File ;
+	typedef ErrorInfo<struct FileTag, std::string>	File ;
 
-	Config( const boost::program_options::variables_map& vm ) ;
+	Config( const SimpleOptions& vm ) ;
 
 	const fs::path Filename() const ;
 	

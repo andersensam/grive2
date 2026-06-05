@@ -18,6 +18,7 @@
 */
 
 #include "CommonLog.hh"
+#include <cassert>
 
 namespace gr { namespace log {
 

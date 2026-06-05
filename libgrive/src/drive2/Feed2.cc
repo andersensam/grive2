@@ -27,7 +27,6 @@
 #include "json/ValResponse.hh"
 
 #include <iostream>
-#include <boost/format.hpp>
 
 namespace gr { namespace v2 {
 

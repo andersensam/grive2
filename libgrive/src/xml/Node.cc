@@ -200,20 +200,35 @@ Node::iterator::iterator( )
 {
 }
 
-Node::iterator::iterator( ImplVec::iterator i )
+Node::iterator::iterator( ImplVec::const_iterator i ) : m_it( i )
 {
-	// for some reason, gcc 4.4.4 doesn't allow me to initialize the base class
-	// in the initializer. I have no choice but to initialize here.
-	base_reference() = i ;
 }
 
-Node::iterator::reference Node::iterator::dereference() const
+Node::iterator::reference Node::iterator::operator*() const
 {
-	Impl *p = *base_reference() ;
+	Impl *p = *m_it ;
 	assert( p != 0 ) ;
 	
 	return Node( p->AddRef() ) ;
 }
+
+Node::iterator& Node::iterator::operator++() { ++m_it; return *this; }
+Node::iterator Node::iterator::operator++(int) { iterator tmp = *this; ++(*this); return tmp; }
+Node::iterator& Node::iterator::operator--() { --m_it; return *this; }
+Node::iterator Node::iterator::operator--(int) { iterator tmp = *this; --(*this); return tmp; }
+
+Node::iterator& Node::iterator::operator+=(difference_type n) { m_it += n; return *this; }
+Node::iterator Node::iterator::operator+(difference_type n) const { return iterator(m_it + n); }
+Node::iterator& Node::iterator::operator-=(difference_type n) { m_it -= n; return *this; }
+Node::iterator Node::iterator::operator-(difference_type n) const { return iterator(m_it - n); }
+Node::iterator::difference_type Node::iterator::operator-(const iterator& other) const { return m_it - other.m_it; }
+
+bool Node::iterator::operator==(const iterator& other) const { return m_it == other.m_it; }
+bool Node::iterator::operator!=(const iterator& other) const { return m_it != other.m_it; }
+bool Node::iterator::operator<(const iterator& other) const { return m_it < other.m_it; }
+bool Node::iterator::operator<=(const iterator& other) const { return m_it <= other.m_it; }
+bool Node::iterator::operator>(const iterator& other) const { return m_it > other.m_it; }
+bool Node::iterator::operator>=(const iterator& other) const { return m_it >= other.m_it; }
 
 Node::Node() : m_ptr( new Impl )
 {
