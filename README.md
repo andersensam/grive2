@@ -1,4 +1,4 @@
-# Grive2 0.5.3
+# Grive2 0.5.4
 
 09 Nov 2022, Vitaliy Filippov
 
@@ -35,6 +35,8 @@ cd $HOME
 mkdir google-drive
 cd google-drive
 grive -a
+# If running on a remote headless server, you can specify a fixed localhost listening port:
+# grive -a -o 12345
 ```
 
 A URL should be printed. Go to the link. You will need to login to your Google
@@ -183,7 +185,33 @@ to build grive. Just clone the repository, `cd` into it and run
 
     dpkg-buildpackage -j4 --no-sign
 
-### Manual build
+### Build with Bazel (Recommended)
+
+Grive2 provides a modern, fully hermetic cross-platform Bazel build architecture supporting **Linux**, **macOS**, and **FreeBSD**. Upstream dependencies (`yajl`, `libgcrypt`, `libgpg-error`) are automatically downloaded and built from source using `rules_foreign_cc` with zero system package requirements.
+
+To build the executable simply run:
+
+```bash
+bazel build //:grive_bin
+```
+
+The resulting standalone executable will be located under `bazel-bin/grive_bin`.
+
+To execute the unit test suite:
+
+```bash
+bazel test //:unittest
+```
+
+You can also pass custom Google Drive OAuth2 Client ID and Secret credentials directly during compilation via build defines (supporting both plain unquoted strings via `APP_ID_STR` and legacy `APP_ID`):
+
+```bash
+bazel build //:grive_bin --copt="-DAPP_ID_STR=your_client_id" --copt="-DAPP_SECRET_STR=your_secret"
+# OR using legacy quoted defines:
+# bazel build //:grive_bin --define APP_ID="<your_client_id>" --define APP_SECRET="<your_client_secret>"
+```
+
+### Build with CMake
 
 Grive uses cmake to build. Basic install sequence is
 
@@ -193,15 +221,22 @@ Grive uses cmake to build. Basic install sequence is
     make -j4
     sudo make install
 
-Alternativly you can define your own client_id and client_secret during build
+Alternatively you can define your own client_id and client_secret during build (using clean unquoted strings via `APP_ID_STR` or legacy `APP_ID`):
 
     mkdir build
     cd build
-    cmake .. "-DAPP_ID:STRING=<client_id>" "-DAPP_SECRET:STRING=<client_secret>"
+    cmake .. "-DAPP_ID_STR=<client_id>" "-DAPP_SECRET_STR=<client_secret>"
+    # OR legacy quoted defines:
+    # cmake .. "-DAPP_ID:STRING=<client_id>" "-DAPP_SECRET:STRING=<client_secret>"
     make -j4
     sudo make install
 
 ## Version History
+
+### Grive2 v0.5.4
+
+- Completely eliminated all dependencies on the Boost C++ libraries (replaced with standard C++17)
+- Added cross-platform Bazel build architecture with direct upstream dependency orchestration
 
 ### Grive2 v0.5.3
 

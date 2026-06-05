@@ -1,0 +1,185 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
+load("@rules_foreign_cc//foreign_cc:defs.bzl", "cmake", "configure_make")
+
+package(default_visibility = ["//visibility:public"])
+
+config_setting(
+    name = "osx",
+    constraint_values = ["@platforms//os:osx"],
+)
+
+config_setting(
+    name = "linux",
+    constraint_values = ["@platforms//os:linux"],
+)
+
+config_setting(
+    name = "freebsd",
+    constraint_values = ["@platforms//os:freebsd"],
+)
+
+cmake(
+    name = "yajl",
+    lib_source = "@yajl_src//:all_srcs",
+    out_static_libs = ["libyajl_s.a"],
+)
+
+configure_make(
+    name = "gpg_error",
+    lib_source = "@libgpg_error_src//:all_srcs",
+    out_static_libs = ["libgpg-error.a"],
+    configure_options = [
+        "--enable-static",
+        "--disable-shared",
+    ] + select({
+        ":osx": [
+            "CFLAGS=\"-g -O2 -Wno-incompatible-pointer-types -Denviron=optarg\"",
+        ],
+        "//conditions:default": [],
+    }),
+    env = select({
+        ":osx": {"AR": "ar"},
+        "//conditions:default": {},
+    }),
+)
+
+configure_make(
+    name = "gcrypt",
+    lib_source = "@libgcrypt_src//:all_srcs",
+    out_static_libs = ["libgcrypt.a"],
+    configure_options = [
+        "--enable-static",
+        "--disable-shared",
+        "--disable-asm",
+        "GPGRT_CONFIG=$$EXT_BUILD_DEPS/gpg_error/bin/gpgrt-config",
+        "GPG_ERROR_CONFIG=$$EXT_BUILD_DEPS/gpg_error/bin/gpgrt-config",
+    ],
+    env = select({
+        ":osx": {"AR": "ar"},
+        "//conditions:default": {},
+    }),
+    deps = [":gpg_error"],
+)
+
+configure_make(
+    name = "cppunit",
+    lib_source = "@cppunit_src//:all_srcs",
+    out_static_libs = ["libcppunit.a"],
+    configure_options = [
+        "--enable-static",
+        "--disable-shared",
+    ],
+    env = select({
+        ":osx": {"AR": "ar"},
+        "//conditions:default": {},
+    }),
+)
+
+cc_library(
+    name = "grive",
+    srcs = glob(
+        ["libgrive/src/**/*.cc"],
+        exclude = ["libgrive/src/bfd/*.cc"],
+    ),
+    hdrs = glob([
+        "libgrive/src/**/*.hh",
+    ]) + select({
+        ":osx": ["libgrive/src/http/NSURLSessionAgent.mm"],
+        "//conditions:default": [],
+    }),
+    strip_include_prefix = "libgrive/src",
+    includes = [
+        "/usr/local/include",
+    ],
+    copts = [
+        "-std=c++17",
+        "-D_FILE_OFFSET_BITS=64",
+        "-DVERSION=\\\"0.5.4\\\"",
+    ] + select({
+        ":osx": [
+            "-Doff64_t=off_t",
+            "-x", "objective-c++",
+        ],
+        ":freebsd": ["-Doff64_t=off_t"],
+        "//conditions:default": [],
+    }),
+    linkopts = select({
+        ":osx": [
+            "-lcurl",
+            "-lexpat",
+            "-framework", "Foundation",
+        ],
+        ":freebsd": [
+            "-lcurl",
+            "-lexpat",
+        ],
+        "//conditions:default": [
+            "-lcurl",
+            "-lexpat",
+        ],
+    }),
+    deps = [
+        ":gcrypt",
+        ":gpg_error",
+        ":yajl",
+    ],
+)
+
+cc_binary(
+    name = "grive_bin",
+    srcs = glob([
+        "grive/src/*.cc",
+    ]),
+    # WARNING: The default OAuth2 credentials provided below are deprecated and may exceed quota.
+    # Downstream users MUST supply their own Google Drive API Client ID and Secret
+    # via custom defines or using runtime CLI flags (--id ... --secret ...).
+    defines = [
+        "APP_ID_STR=615557989097-i93d4d1ojpen0m0dso18ldr6orjkidgf.apps.googleusercontent.com",
+        "APP_SECRET_STR=xiM8Apu_WuRRdheNelJcNtOD",
+    ],
+    copts = [
+        "-std=c++17",
+        "-D_FILE_OFFSET_BITS=64",
+        "-DVERSION=\\\"0.5.4\\\"",
+    ],
+    deps = [
+        ":grive",
+    ],
+)
+
+cc_test(
+    name = "unittest",
+    srcs = [
+        "libgrive/test/Assert.hh",
+        "libgrive/test/UnitTest.cc",
+    ] + glob([
+        "libgrive/test/base/*.cc",
+        "libgrive/test/base/*.hh",
+        "libgrive/test/protocol/*.cc",
+        "libgrive/test/protocol/*.hh",
+        "libgrive/test/util/*.cc",
+        "libgrive/test/util/*.hh",
+        "libgrive/test/xml/*.cc",
+        "libgrive/test/xml/*.hh",
+    ]),
+    features = [
+        "-dependency_check",
+        "-absolute_path_check",
+    ],
+    copts = [
+        "-std=c++17",
+        "-D_FILE_OFFSET_BITS=64",
+        "-DVERSION=\\\"0.5.4\\\"",
+        "-DTEST_DATA=\\\"libgrive/test/data/\\\"",
+    ],
+    includes = [
+        "libgrive/test",
+    ],
+    data = glob([
+        "libgrive/test/data/**",
+    ]),
+    deps = [
+        ":cppunit",
+        ":grive",
+    ],
+)

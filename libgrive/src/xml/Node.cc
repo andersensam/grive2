@@ -56,7 +56,7 @@ public :
 	
 	~Impl()
 	{
-		std::for_each( m_children.begin(), m_children.end(), std::mem_fun( &Impl::Release ) ) ;
+		std::for_each( m_children.begin(), m_children.end(), [](Impl* p) { p->Release(); } ) ;
 	}
 
 	Impl* AddRef()

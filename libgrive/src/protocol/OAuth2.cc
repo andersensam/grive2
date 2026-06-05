@@ -201,7 +201,7 @@ bool OAuth2::Auth( const std::string&	auth_code )
 
 std::string OAuth2::MakeAuthURL()
 {
-	if ( !m_port )
+	if ( m_socket < 0 )
 	{
 		m_socket = socket( AF_INET, SOCK_STREAM, 0 );
 		if ( m_socket < 0 )
@@ -220,6 +220,8 @@ std::string OAuth2::MakeAuthURL()
 		sockaddr_in addr = { 0 };
 		addr.sin_family = AF_INET;
 		addr.sin_addr.s_addr = htonl( INADDR_LOOPBACK ); // Bind to localhost only
+		if ( m_port > 0 )
+			addr.sin_port = htons( m_port );
 		
 		if ( bind( m_socket, (sockaddr*)&addr, sizeof( addr ) ) < 0 )
 		{

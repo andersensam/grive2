@@ -28,6 +28,7 @@
 #include "util/FunctionTest.hh"
 #include "util/ConfigTest.hh"
 #include "util/SignalHandlerTest.hh"
+#include "protocol/OAuth2Test.hh"
 //#include "xml/NodeTest.hh"
 
 int main( int argc, char **argv )
@@ -44,6 +45,7 @@ int main( int argc, char **argv )
 	runner.addTest( FunctionTest::suite( ) ) ;
 	runner.addTest( ConfigTest::suite( ) ) ;
 	runner.addTest( SignalHandlerTest::suite( ) ) ;
+	runner.addTest( OAuth2Test::suite( ) ) ;
 	//runner.addTest( NodeTest::suite( ) ) ;
 	runner.run();
   

@@ -47,8 +47,30 @@
 #include <iostream>
 #include <unistd.h>
 
-const std::string default_id            = APP_ID ;
-const std::string default_secret        = APP_SECRET ;
+// WARNING: The default OAuth2 client credentials (APP_ID_STR / APP_SECRET_STR) are deprecated.
+// Downstream users are strongly encouraged to supply their own credentials via CLI:
+// grive -a --id <client_id> --secret <client_secret>
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+
+#ifndef APP_ID_STR
+  #ifdef APP_ID
+    #define APP_ID_STR APP_ID
+  #else
+    #define APP_ID_STR 615557989097-i93d4d1ojpen0m0dso18ldr6orjkidgf.apps.googleusercontent.com
+  #endif
+#endif
+
+#ifndef APP_SECRET_STR
+  #ifdef APP_SECRET
+    #define APP_SECRET_STR APP_SECRET
+  #else
+    #define APP_SECRET_STR xiM8Apu_WuRRdheNelJcNtOD
+  #endif
+#endif
+
+const std::string default_id            = STR(APP_ID_STR) ;
+const std::string default_secret        = STR(APP_SECRET_STR) ;
 
 using namespace gr ;
 
@@ -122,6 +144,7 @@ int Main( int argc, char **argv )
 		else if (arg == "-P" || arg == "--progress-bar") vm.flags["progress-bar"] = true;
 		else if (arg == "-i" || arg == "--id") { if (i+1 < argc) vm.options["id"] = argv[++i]; }
 		else if (arg == "-e" || arg == "--secret") { if (i+1 < argc) vm.options["secret"] = argv[++i]; }
+		else if (arg == "-o" || arg == "--port") { if (i+1 < argc) vm.uints["port"] = std::atoi(argv[++i]); }
 		else if (arg == "-p" || arg == "--path") { if (i+1 < argc) vm.options["path"] = argv[++i]; }
 		else if (arg == "-s" || arg == "--dir") { if (i+1 < argc) vm.options["dir"] = argv[++i]; }
 		else if (arg == "--log-http") { if (i+1 < argc) vm.options["log-http"] = argv[++i]; }
@@ -139,6 +162,7 @@ int Main( int argc, char **argv )
 			"  -a [ --auth ]             Request authorization token\n"
 			"  -i [ --id ] arg           Authentication ID\n"
 			"  -e [ --secret ] arg       Authentication secret\n"
+			"  -o [ --port ] arg         Specify custom OAuth2 listening port\n"
 			"  --print-url               Only print url for request\n"
 			"  -p [ --path ] arg         Path to working copy root\n"
 			"  -s [ --dir ] arg          Single subdirectory to sync\n"
@@ -195,6 +219,8 @@ int Main( int argc, char **argv )
                         : default_secret ;
 
 		OAuth2 token( http.get(), id, secret ) ;
+		if ( vm.uints.count( "port" ) )
+			token.SetPort( vm.uints["port"] ) ;
 
 		if ( vm.flags.count("print-url") )
 		{

@@ -89,7 +89,7 @@ NodeSet NodeSet::Find( const std::string& name, const std::string& value ) const
 		NodeSet cand = (*i)[name] ;
 		for ( iterator j = cand.m_first ; j != cand.m_last ; ++j )
 		{
-			if ( j->Value() == value )
+			if ( (*j).Value() == value )
 			{
 				result.Add( *i ) ;
 				break ;

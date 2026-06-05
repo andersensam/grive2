@@ -122,6 +122,7 @@ IF ( CPPUNIT_FOUND )
 	# list of test source files here
 	file(GLOB TEST_SRC
 		test/base/*.cc
+		test/protocol/*.cc
 		test/util/*.cc
 	)
 

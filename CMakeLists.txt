@@ -4,7 +4,7 @@ project(grive2)
 include(GNUInstallDirs)
 
 # Grive version. remember to update it for every new release!
-set( GRIVE_VERSION "0.5.3" CACHE STRING "Grive version" )
+set( GRIVE_VERSION "0.5.4" CACHE STRING "Grive version" FORCE )
 message(WARNING "Version to build: ${GRIVE_VERSION}")
 
 # common compile options

@@ -18,6 +18,7 @@
 */
 
 #include "TreeBuilder.hh"
+#include <expat.h>
 
 #include "Error.hh"
 #include "Node.hh"

@@ -45,6 +45,8 @@ public :
 
 	std::string Str() const ;
 
+	void SetPort( int port ) { m_port = port ; }
+
 	std::string MakeAuthURL() ;
 
 	bool Auth( const std::string& auth_code ) ;

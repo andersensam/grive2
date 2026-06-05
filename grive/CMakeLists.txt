@@ -23,6 +23,9 @@ target_link_libraries( grive_executable
 	${LIBGCRYPT_LIBRARIES}
 )
 
+# WARNING: The default OAuth2 credentials provided below are deprecated and may exceed quota.
+# Downstream users MUST supply their own Google Drive API Client ID and Secret
+# during CMake configuration (-DAPP_ID=... -DAPP_SECRET=...) or via CLI (--id ... --secret ...).
 set(DEFAULT_APP_ID "615557989097-i93d4d1ojpen0m0dso18ldr6orjkidgf.apps.googleusercontent.com")
 set(DEFAULT_APP_SECRET "xiM8Apu_WuRRdheNelJcNtOD")
 set(APP_ID ${DEFAULT_APP_ID} CACHE STRING "Application Id")
@@ -30,8 +33,8 @@ set(APP_SECRET ${DEFAULT_APP_SECRET} CACHE STRING "Application Secret")
 
 target_compile_definitions ( grive_executable
 	PRIVATE
-		-DAPP_ID="${APP_ID}"
-		-DAPP_SECRET="${APP_SECRET}"
+		-DAPP_ID_STR=${APP_ID}
+		-DAPP_SECRET_STR=${APP_SECRET}
 )
 
 set_target_properties( grive_executable

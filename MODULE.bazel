@@ -1,0 +1,39 @@
+module(
+    name = "grive2",
+    version = "0.5.4",
+)
+
+bazel_dep(name = "rules_cc", version = "0.2.17")
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "rules_foreign_cc", version = "0.14.0")
+
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "yajl_src",
+    strip_prefix = "yajl-2.1.0",
+    urls = ["https://github.com/lloyd/yajl/archive/refs/tags/2.1.0.tar.gz"],
+    build_file_content = """filegroup(name="all_srcs", srcs=glob(["**"]), visibility=["//visibility:public"])""",
+)
+
+http_archive(
+    name = "libgpg_error_src",
+    strip_prefix = "libgpg-error-1.50",
+    urls = ["https://www.gnupg.org/ftp/gcrypt/libgpg-error/libgpg-error-1.50.tar.bz2"],
+    build_file_content = """filegroup(name="all_srcs", srcs=glob(["**"]), visibility=["//visibility:public"])""",
+)
+
+http_archive(
+    name = "libgcrypt_src",
+    strip_prefix = "libgcrypt-1.11.0",
+    urls = ["https://www.gnupg.org/ftp/gcrypt/libgcrypt/libgcrypt-1.11.0.tar.bz2"],
+    build_file_content = """filegroup(name="all_srcs", srcs=glob(["**"]), visibility=["//visibility:public"])""",
+)
+
+http_archive(
+    name = "cppunit_src",
+    sha256 = "89c5c6665337f56fd2db36bc3805a5619709d51fb136e51937072f63fcc717a7",
+    strip_prefix = "cppunit-1.15.1",
+    urls = ["https://dev-www.libreoffice.org/src/cppunit-1.15.1.tar.gz"],
+    build_file_content = """filegroup(name="all_srcs", srcs=glob(["**"]), visibility=["//visibility:public"])""",
+)
