@@ -88,13 +88,13 @@ cc_library(
         "//conditions:default": [],
     }),
     strip_include_prefix = "libgrive/src",
-    includes = [
-        "/usr/local/include",
-    ],
+    includes = [],
     copts = [
         "-std=c++17",
         "-D_FILE_OFFSET_BITS=64",
         "-DVERSION=\\\"0.5.4\\\"",
+        "-Xclang", "-isystem", "-Xclang", "/usr/local/include",
+        "-Xclang", "-isystem", "-Xclang", "/usr/include",
     ] + select({
         ":osx": [
             "-Doff64_t=off_t",
@@ -141,6 +141,8 @@ cc_binary(
         "-std=c++17",
         "-D_FILE_OFFSET_BITS=64",
         "-DVERSION=\\\"0.5.4\\\"",
+        "-Xclang", "-isystem", "-Xclang", "/usr/local/include",
+        "-Xclang", "-isystem", "-Xclang", "/usr/include",
     ],
     deps = [
         ":grive",
@@ -171,6 +173,8 @@ cc_test(
         "-D_FILE_OFFSET_BITS=64",
         "-DVERSION=\\\"0.5.4\\\"",
         "-DTEST_DATA=\\\"libgrive/test/data/\\\"",
+        "-Xclang", "-isystem", "-Xclang", "/usr/local/include",
+        "-Xclang", "-isystem", "-Xclang", "/usr/include",
     ],
     includes = [
         "libgrive/test",

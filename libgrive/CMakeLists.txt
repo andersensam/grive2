@@ -47,7 +47,11 @@ include_directories(
 	${OPT_INCS}
 	${YAJL_INCLUDE_DIRS}
 	${YAJL_INCLUDE_DIRS}/..
+	${CURL_INCLUDE_DIRS}
+	${CURL_INCLUDE_DIR}
 	/opt/homebrew/include
+	/usr/local/include
+	/usr/include
 )
 
 file (GLOB PROTOCOL_HEADERS

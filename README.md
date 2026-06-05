@@ -221,13 +221,11 @@ Grive uses cmake to build. Basic install sequence is
     make -j4
     sudo make install
 
-Alternatively you can define your own client_id and client_secret during build (using clean unquoted strings via `APP_ID_STR` or legacy `APP_ID`):
+Alternatively you can define your own client_id and client_secret during build:
 
     mkdir build
     cd build
-    cmake .. "-DAPP_ID_STR=<client_id>" "-DAPP_SECRET_STR=<client_secret>"
-    # OR legacy quoted defines:
-    # cmake .. "-DAPP_ID:STRING=<client_id>" "-DAPP_SECRET:STRING=<client_secret>"
+    cmake .. "-DAPP_ID:STRING=<client_id>" "-DAPP_SECRET:STRING=<client_secret>"
     make -j4
     sudo make install
 

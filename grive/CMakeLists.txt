@@ -7,7 +7,11 @@ find_package(LibGcrypt REQUIRED)
 include_directories(
 	${grive_SOURCE_DIR}/../libgrive/src
 	${OPT_INCS}
+	${CURL_INCLUDE_DIRS}
+	${CURL_INCLUDE_DIR}
 	/opt/homebrew/include
+	/usr/local/include
+	/usr/include
 )
 
 file (GLOB GRIVE_EXE_SRC
