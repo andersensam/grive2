@@ -25,12 +25,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "json/Val.hh"
 #include "util/log/Log.hh"
 
-#include <boost/program_options.hpp>
 #include <iostream>
 
 using namespace grut;
 using namespace gr ;
-namespace po = boost::program_options;
 
 ConfigTest::ConfigTest( )
 {
@@ -38,28 +36,18 @@ ConfigTest::ConfigTest( )
 
 void ConfigTest::TestInitialiseWithNoPath( )
 {
-	po::variables_map vm;
-	po::notify(vm);
-
-	Config config(vm);
+	Config::SimpleOptions opts;
+	// No options provided, should use defaults
+	Config config(opts);
 	GRUT_ASSERT_EQUAL( "./.grive", config.Filename().string()) ;
 }
 
 void ConfigTest::TestInitialiseWithPath( )
 {
-	char const *argv[] = { "Program", "-p", "/home/grive" };
-	int argc = 3;
-
-	po::options_description desc( "Grive options" );
-	desc.add_options()
-		( "path,p",		po::value<std::string>(), "Path to sync")
-		;
-
-	po::variables_map vm;
-	po::store(po::parse_command_line( argc, argv, desc), vm );
-	po::notify(vm);
-
-	Config config(vm);
+	Config::SimpleOptions opts;
+	opts.options["path"] = "/home/grive";
+	
+	Config config(opts);
 	GRUT_ASSERT_EQUAL( "/home/grive/.grive", config.Filename().string()) ;
 }
 

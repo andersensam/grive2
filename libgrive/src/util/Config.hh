@@ -23,13 +23,8 @@
 #include "FileSystem.hh"
 #include "json/Val.hh"
 
-namespace boost
-{
-	namespace program_options
-	{
-		class variables_map ;
-	}
-}
+#include <string>
+#include <map>
 
 namespace gr {
 

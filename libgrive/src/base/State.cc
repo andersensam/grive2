@@ -28,9 +28,11 @@
 #include "util/log/Log.hh"
 #include "json/JsonParser.hh"
 
-#include <boost/algorithm/string.hpp>
-
+#include <algorithm>
 #include <fstream>
+#include <regex>
+#include <string>
+#include <numeric>
 
 namespace gr {
 
@@ -38,11 +40,11 @@ const std::string state_file = ".grive_state" ;
 const std::string ignore_file = ".griveignore" ;
 const int MAX_IGN = 65536 ;
 const char* regex_escape_chars = ".^$|()[]{}*+?\\";
-const boost::regex regex_escape_re( "[.^$|()\\[\\]{}*+?\\\\]" );
+const std::regex regex_escape_re( "[.^$|()\\[\\]{}*+?\\\\]" );
 
 inline std::string regex_escape( std::string s )
 {
-	return regex_replace( s, regex_escape_re, "\\\\&", boost::format_sed );
+	return std::regex_replace( s, regex_escape_re, "\\\\&", std::regex_constants::format_sed );
 }
 
 State::State( const fs::path& root, const Val& options  ) :
@@ -60,8 +62,8 @@ State::State( const fs::path& root, const Val& options  ) :
 		m_ign = options["ignore"].Str();
 	else if ( options.Has( "dir" ) )
 	{
-		const boost::regex trim_path( "^/+|/+$" );
-		std::string m_dir = regex_replace( options["dir"].Str(), trim_path, "" );
+		const std::regex trim_path( "^/+|/+$" );
+		std::string m_dir = std::regex_replace( options["dir"].Str(), trim_path, "" );
 		if ( !m_dir.empty() )
 		{
 			// "-s" is internally converted to an ignore regexp
@@ -78,7 +80,7 @@ State::State( const fs::path& root, const Val& options  ) :
 	}
 
 	m_ign_changed = m_orig_ign != "" && m_orig_ign != m_ign;
-	m_ign_re = boost::regex( m_ign.empty() ? "^\\.(grive$|grive_state$|trash)" : ( m_ign+"|^\\.(grive$|grive_state$|trash)" ) );
+	m_ign_re = std::regex( m_ign.empty() ? "^\\.(grive$|grive_state$|trash)" : ( m_ign+"|^\\.(grive$|grive_state$|trash)" ) );
 }
 
 State::~State()
@@ -95,7 +97,7 @@ void State::FromLocal( const fs::path& p )
 
 bool State::IsIgnore( const std::string& filename )
 {
-	return regex_search( filename.c_str(), m_ign_re, boost::format_perl );
+	return std::regex_search( filename.c_str(), m_ign_re );
 }
 
 void State::FromLocal( const fs::path& p, Resource* folder, Val& tree )
@@ -368,8 +370,9 @@ bool State::ParseIgnoreFile( const char* buffer, int size )
 				std::string str1;
 				while (1)
 				{
-					str1 = regex_replace( parts[j], re5, "$1[^/]", boost::format_perl );
-					str1 = regex_replace( str1, re4, "$1[^/]*", boost::format_perl );
+					// Replace boost::format_perl with std::regex_replace defaults
+					str1 = std::regex_replace( parts[j], re5, "$1[^/]" );
+					str1 = std::regex_replace( str1, re4, "$1[^/]*" );
 					if ( str1.size() == parts[j].size() )
 						break;
 					parts[j] = str1;
@@ -378,7 +381,11 @@ bool State::ParseIgnoreFile( const char* buffer, int size )
 		}
 		if ( !inc )
 		{
-			str = boost::algorithm::join( parts, "/" ) + "(/|$)";
+			// Replace boost::algorithm::join with std::accumulate
+			std::string str = std::accumulate(parts.begin(), parts.end(), std::string(""), 
+				[](const std::string& a, const std::string& b) { 
+					return a.empty() ? b : a + "/" + b; 
+				}) + "(/|$)";
 			exclude_re = exclude_re + ( exclude_re.size() > 0 ? "|" : "" ) + str;
 		}
 		else

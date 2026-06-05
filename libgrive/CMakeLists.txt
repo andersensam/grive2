@@ -7,7 +7,9 @@ if (NOT APPLE)
     find_package(CURL REQUIRED)
 endif(NOT APPLE)
 find_package(Backtrace)
-find_package(Boost 1.40.0 COMPONENTS program_options filesystem unit_test_framework regex system REQUIRED)
+# Modern Boost (1.70+) has header-only libraries, but some components still need to be found
+# For Boost >= 1.70, use the "COMPONENTS" syntax but the libraries are header-only
+find_package(Boost 1.70.0 REQUIRED COMPONENTS program_options filesystem unit_test_framework regex)
 find_package(BFD)
 find_package(CppUnit)
 find_package(Iberty)
@@ -88,10 +90,9 @@ target_link_libraries( grive
 	${YAJL_LIBRARIES}
 	${CURL_LIBRARIES}
 	${LIBGCRYPT_LIBRARIES}
-	${Boost_FILESYSTEM_LIBRARY}
-	${Boost_PROGRAM_OPTIONS_LIBRARY}
-	${Boost_REGEX_LIBRARY}
-	${Boost_SYSTEM_LIBRARY}
+	${Boost_LIBRARIES}
+	${CMAKE_DL_LIBS}
+	${CMAKE_DL_LIBS}  # For std::filesystem on some systems
 	${IBERTY_LIBRARY}
 	${OPT_LIBS}
 )

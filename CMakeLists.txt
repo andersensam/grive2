@@ -9,7 +9,7 @@ message(WARNING "Version to build: ${GRIVE_VERSION}")
 
 # common compile options
 add_definitions( -DVERSION="${GRIVE_VERSION}" )
-add_definitions( -D_FILE_OFFSET_BITS=64 -std=c++0x )
+add_definitions( -D_FILE_OFFSET_BITS=64 -std=c++17 )
 
 if ( APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD" OR ${CMAKE_SYSTEM_NAME} MATCHES "OpenBSD" )
 	add_definitions( -Doff64_t=off_t )

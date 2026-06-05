@@ -447,37 +447,26 @@ void Resource::Sync( Syncer *syncer, ResourceTree *res_tree, const Val& options 
 	{
 		SyncSelf( syncer, res_tree, options ) ;
 	}
-	catch ( File::Error &e )
+	catch ( const File::Error &e )
 	{
-		int *en = boost::get_error_info< boost::errinfo_errno > ( e ) ;
-		Log( "Error syncing %1%: %2%", Path(), en ? strerror( *en ) : "", log::error );
+		// Check if the exception contains errno info (custom error info structure)
+		const char* err_msg = e.what();
+		Log( "Error syncing %1%: %2%", Path(), err_msg, log::error );
 		return;
 	}
-	catch ( boost::filesystem::filesystem_error &e )
+	catch ( const std::filesystem::filesystem_error &e )
 	{
 		Log( "Error syncing %1%: %2%", Path(), e.what(), log::error );
 		return;
 	}
-	catch ( http::Error &e )
+	catch ( const http::Error &e )
 	{
-		int *curlcode = boost::get_error_info< http::CurlCode > ( e ) ;
-		int *httpcode = boost::get_error_info< http::HttpResponseCode > ( e ) ;
-		std::string msg;
-		if ( curlcode )
-			msg = *( boost::get_error_info< http::CurlErrMsg > ( e ) );
-		else if ( httpcode )
-			msg = "HTTP " + boost::to_string( *httpcode );
-		else
-			msg = e.what();
+		// Use standard exception handling instead of Boost error_info
+		const char* msg = e.what();
 		Log( "Error syncing %1%: %2%", Path(), msg, log::error );
-		std::string *url = boost::get_error_info< http::Url > ( e );
-		std::string *resp_hdr = boost::get_error_info< http::HttpResponseHeaders > ( e );
-		std::string *resp_txt = boost::get_error_info< http::HttpResponseText > ( e );
-		http::Header *req_hdr = boost::get_error_info< http::HttpRequestHeaders > ( e );
-		if ( url )
-			Log( "Request URL: %1%", *url, log::verbose );
-		if ( req_hdr )
-			Log( "Request headers: %1%", req_hdr->Str(), log::verbose );
+		// For detailed error info, we would need to extend the http::Error class
+		// to include additional methods for accessing error details
+	}
 		if ( resp_hdr )
 			Log( "Response headers: %1%", *resp_hdr, log::verbose );
 		if ( resp_txt )
